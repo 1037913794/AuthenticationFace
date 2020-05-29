@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ArcSoftFace.Utils;
@@ -16,46 +17,82 @@ namespace ArcSoftFace
     public partial class FormStudent : Form 
 
     {
-        string PhotoPath;
+        private string PhotoPath = "";
         private long maxSize = 1024 * 1024 * 2;
+        private Thread thread;
         public FormStudent()
         {
             InitializeComponent();
             if (AuthenticationForm.getClass != " ALL STUDENTS")
             {
-                CnotextBox.ReadOnly = true;
-                CnametextBox.ReadOnly = true;
                 string str1 = AuthenticationForm.getClass;
-                string[] strArray1;
-                strArray1 = str1.Split(' ');
-                CnotextBox.Text = strArray1[0];
-                CnametextBox.Text = strArray1[1];
+                comboBoxClass.Text = str1;
             }
-            string str2 = AuthenticationForm.getStudent;
-            string[] strArray2;
-            strArray2 = str2.Split(' ');
-            textBoxOldSno.Text = strArray2[0];
-            textBoxOldSname.Text = strArray2[1];
-            string gender ="";
-            using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Student\\Student.csv"))
+            else
             {
-                string strLine = sr.ReadLine();
-                string[] strStudent;
-                while ((strLine = sr.ReadLine()) != null)
+                using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
                 {
-                    strStudent = strLine.Split(',');
-                    if (strStudent[0] == strArray2[0])
+                    string strLine = sr.ReadLine();
+                    string[] strArray;
+                    while ((strLine = sr.ReadLine()) != null)
                     {
-                        gender = strStudent[2];
-                        break;
+                        strArray = strLine.Split(',');
+                        comboBoxClass.Items.Add(strArray[0] + " " + strArray[1]);
                     }
-
                 }
             }
-            textBoxOldGender.Text = gender;
+            string str2 = AuthenticationForm.getStudent;
+            if(str2 != "")
+            {
+                string[] strArray2;
+                strArray2 = str2.Split(' ');
+                textBoxOldSno.Text = strArray2[0];
+                textBoxOldSname.Text = strArray2[1];
+                string gender = "";
+                using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Student\\Student.csv"))
+                {
+                    string strLine = sr.ReadLine();
+                    string[] strStudent;
+                    while ((strLine = sr.ReadLine()) != null)
+                    {
+                        strStudent = strLine.Split(',');
+                        if (strStudent[0] == strArray2[0])
+                        {
+                            gender = strStudent[2];
+                            break;
+                        }
+
+                    }
+                }
+                textBoxOldGender.Text = gender;
+            }
+            else
+            {
+                textBoxOldSno.Text = "";
+                textBoxOldSname.Text = "";
+                textBoxOldGender.Text = "";
+            }
 
         }
-
+        private bool ExistStudent(string sno)
+        {
+            bool find = false;
+            using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Student\\Student.csv"))
+            {
+                string strline = sr.ReadLine();
+                string[] strs;
+                while ((strline = sr.ReadLine()) != null)
+                {
+                    strs = strline.Split(',');
+                    if (strs[0] == sno)
+                    {
+                        find = true;
+                        break;
+                    }
+                }
+            }
+            return find;
+        }
         private bool CheckImage(string imagePath)
         {
             if (imagePath == null)
@@ -100,12 +137,12 @@ namespace ArcSoftFace
             return true;
         }
 
-        private void PhotoChoose_Click(object sender, EventArgs e)
+        private void btnChooseImage_Click(object sender, EventArgs e)
         {
             OpenFileDialog photo = new OpenFileDialog();
-            photo.Title = "选择图片";
-            photo.Filter = "图片文件(*.jpg)|*.jpg";
-            if (photo.ShowDialog() == System.Windows.Forms.DialogResult.OK && CheckImage(photo.FileName))
+            photo.Title = "Choose Image";
+            photo.Filter = "Image Files(*.jpg)|*.jpg";
+            if (photo.ShowDialog() == DialogResult.OK)
             {
                 FilePhoto.Image = Image.FromFile(photo.FileName);
                 FilePhoto.SizeMode = PictureBoxSizeMode.StretchImage;
@@ -115,8 +152,11 @@ namespace ArcSoftFace
 
         private void AddButton_Click(object sender, EventArgs e)
         {
-            string cno = CnotextBox.Text;
-            string cname = CnametextBox.Text;
+            string c = comboBoxClass.Text;
+            string[] strc;
+            strc = c.Split(' ');
+            string cno = strc[0];
+            string cname = strc[1];
             string sno = SnotextBox.Text;
             string sname = SnametextBox.Text;
             string gender = GendertextBox.Text;
@@ -141,8 +181,19 @@ namespace ArcSoftFace
                     lines++;
                 }
             }
-            if (PhotoPath != null && sname != null && cno != null && sno != null && gender != null)
+            if (sname != "" && cno != "" && sno != "" && gender != "" && (PhotoPath != "" || ExistStudent(sno)))
             {
+                if(PhotoPath != "" && ExistStudent(sno))
+                {
+                    File.Delete("..\\..\\..\\Database\\Student\\Image\\" + sno + ".jpg");
+                    File.Copy(PhotoPath, "..\\..\\..\\Database\\Student\\Image\\" + sno + ".jpg", true);
+                }
+                else if(PhotoPath != "")
+                {
+                    File.Copy(PhotoPath, "..\\..\\..\\Database\\Student\\Image\\" + sno + ".jpg", true);
+                }
+                else
+                { }
                 string[] strSno = new string[lines];
                 using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Student\\Student.csv"))
                 {
@@ -173,25 +224,23 @@ namespace ArcSoftFace
                     {
                         brout1.WriteLine(sno + "," + sname + "," + gender);
                     }
-
                 }
                 using (StreamWriter brout2 = new StreamWriter(fs2))
                 {
                     string str = sno;
                     for (int i = 0; i < record; i++)
                     {
-                        str += ",0";
+                        str += ",0,-1";
                     }
                     brout2.WriteLine(str);
                 }
-                File.Copy(PhotoPath, "..\\..\\..\\Database\\Student\\Image\\" + sno + ".jpg", true);
-                MessageBox.Show("添加学生成功");
+                MessageBox.Show("Add Successfully");
             }
             else
             {
-                MessageBox.Show("请输入完整信息");
+                MessageBox.Show("Please Enter Complete Imformation");
             }
-            PhotoPath = null;
+            PhotoPath = "";
         }
 
         private void Modify_Click(object sender, EventArgs e)
@@ -199,133 +248,108 @@ namespace ArcSoftFace
             string New_Sno = textBoxSno.Text;
             string New_Sname = textBoxSname.Text;
             string New_Gender = textBoxGender.Text;
-            string str = AuthenticationForm.getStudent;
-            string[] StrArray;
-            StrArray = str.Split(' ');
-            string Old_Sno = StrArray[0], Old_Sname = StrArray[1];
-            string txt = "Sno,Sname,Gender" + "\r\n";
+            string Old_Sno = textBoxOldSno.Text;
+            string Old_Sname = textBoxOldSname.Text;
+            string Old_Gender = textBoxOldGender.Text;
             //将学生表中对应信息进行修改
-            using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Student\\Student.csv"))
-            {
-                string strLine = sr.ReadLine();
-                string[] strStudent;
-                while ((strLine = sr.ReadLine()) != null)
+            if(New_Sno != "" && New_Sname != "" && New_Gender != "" && Old_Sno != "" && Old_Sname != "" && Old_Gender != "")
+            { 
+                string[] texts = File.ReadAllLines("..\\..\\..\\Database\\Student\\Student.csv");
+                for (int i = 0; i < texts.Length; i++)
                 {
-                    strStudent = strLine.Split(',');
-                    if (strStudent[0] == Old_Sno)
+                    string s = texts[i].Split(',')[0];
+                    if (s == Old_Sno)
                     {
-                        txt += New_Sno + "," + New_Sname + "," + New_Gender;
-                        txt += "\r\n";
-                    }
-                    else
-                    {
-                        txt += strLine + "\r\n";
+                        texts[i] = New_Sno + ',' + New_Sname + ',' + New_Gender;
+                        break;
                     }
                 }
-            }
-            //将txt重新写入
-            using (StreamWriter writer = new StreamWriter("..\\..\\..\\Database\\Student\\Student.csv"))
-            {
-                writer.Write(txt);
-            }
-            //如果学号进行了更改则需要对该学生所在课程的课程表进行修改，以及照片名进行修改
-            if (Old_Sno != New_Sno)
-            {
-                int lines = 0; //用来统计课程数，方便循环查找
-                using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
+                File.WriteAllLines("..\\..\\..\\Database\\Student\\Student.csv", texts);
+                //如果学号进行了更改则需要对该学生所在课程的课程表进行修改，以及照片名进行修改
+                if (Old_Sno != New_Sno)
                 {
-                    string strline = sr.ReadLine();
-                    while ((strline = sr.ReadLine()) != null)
+                    int lines = 0; //用来统计课程数，方便循环查找
+                    using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
                     {
-                        lines++;
+                        string strline = sr.ReadLine();
+                        while ((strline = sr.ReadLine()) != null)
+                        {
+                            lines++;
+                        }
                     }
-                }
-                string[] Course = new string[lines];
-                //将所有课程课程号读入数组
-                using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
-                {
-                    string strLine = sr.ReadLine();
-                    string[] strArray;
-                    int i = 0;
-                    while ((strLine = sr.ReadLine()) != null)
-                    {
-                        strArray = strLine.Split(',');
-                        Course[i] = strArray[0];
-                        i++;
-                    }
-                }
-                //在所有课程中寻找该学生信息，若有则修改
-                foreach (string c in Course)
-                {
-                    int record = 0;
-                    string text = "Sno";
-                    //统计该课程的签到次数
+                    string[] Course = new string[lines];
+                    //将所有课程课程号读入数组
                     using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
                     {
                         string strLine = sr.ReadLine();
                         string[] strArray;
+                        int i = 0;
                         while ((strLine = sr.ReadLine()) != null)
                         {
                             strArray = strLine.Split(',');
-                            if (strArray[0] == c)
-                                record = Convert.ToInt32(strArray[2]);
+                            Course[i] = strArray[0];
+                            i++;
                         }
                     }
-                    for (int i = 0; i < record; i++)
+                    //在所有课程中寻找该学生信息，若有则修改
+                    foreach (string c in Course)
                     {
-                        string str1 = (",Record" + (i + 1).ToString());
-                        text += str1;
-                    }
-                    text += "\r\n";
-                    //将课程数据全部读出读入text
-                    using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\List\\" + c + ".csv"))
-                    {
-                        string strLine = sr.ReadLine();
-                        string[] strClass;
-                        while ((strLine = sr.ReadLine()) != null)
+                        int record = 0;
+                        //统计该课程的签到次数
+                        using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
                         {
-                            strClass = strLine.Split(',');
-                            if (strClass[0] == Old_Sno)
+                            string strLine = sr.ReadLine();
+                            string[] strArray;
+                            while ((strLine = sr.ReadLine()) != null)
                             {
-                                text += New_Sno;
-                                for (int i = 1; i < record + 1; i++)
-                                {
-                                    text += "," + strClass[i].ToString();
-                                }
-                                text += "\r\n";
-                            }
-                            else
-                            {
-                                text += strLine + "\r\n";
+                                strArray = strLine.Split(',');
+                                if (strArray[0] == c)
+                                    record = Convert.ToInt32(strArray[2]);
                             }
                         }
+                        string[] texts_cno = File.ReadAllLines("..\\..\\..\\Database\\Class\\List\\" + c + ".csv");
+                        for (int i = 0; i < texts_cno.Length; i++)
+                        {
+                            string s = texts_cno[i].Split(',')[0];
+                            if (s == Old_Sno)
+                            {
+                                string str_sno = New_Sno;
+                                for (int j = 1; j < (2 * record + 1); j = j + 2)
+                                {
+                                    str_sno += ',';
+                                    str_sno += texts_cno[i].Split(',')[j];
+                                    str_sno += ',';
+                                    str_sno += texts_cno[i].Split(',')[j + 1];
+                                }
+                                texts_cno[i] = str_sno;
+                                break;
+                            }
+                        }
+                        File.WriteAllLines("..\\..\\..\\Database\\Class\\List\\" + c + ".csv", texts_cno);
                     }
-                    //将text重新写入
-                    using (StreamWriter writer = new StreamWriter("..\\..\\..\\Database\\Class\\List\\" + c + ".csv"))
+                    if (PhotoPath != null)
                     {
-                        writer.Write(text);
+                        File.Delete("..\\..\\..\\Database\\Student\\Image\\" + Old_Sno + ".jpg");
+                        File.Copy(PhotoPath, "..\\..\\..\\Database\\Student\\Image\\" + New_Sno + ".jpg", true);
+                    }
+                    else
+                    {
+                        File.Copy("..\\..\\..\\Database\\Student\\Image\\" + Old_Sno + ".jpg",
+                            "..\\..\\..\\Database\\Student\\Image\\" + New_Sno + ".jpg", true);
+                        File.Delete("..\\..\\..\\Database\\Student\\Image\\" + Old_Sno + ".jpg");
                     }
                 }
+                //如果学号未改则更改照片，则直接将原照片改成新照片
                 if (PhotoPath != null)
                 {
-                    File.Delete("..\\..\\..\\Database\\Student\\Image\\" + Old_Sno + ".jpg");
                     File.Copy(PhotoPath, "..\\..\\..\\Database\\Student\\Image\\" + New_Sno + ".jpg", true);
                 }
-                else
-                {
-                    File.Copy("..\\..\\..\\Database\\Student\\Image\\" + Old_Sno + ".jpg",
-                        "..\\..\\..\\Database\\Student\\Image\\" + New_Sno + ".jpg", true);
-                    File.Delete("..\\..\\..\\Database\\Student\\Image\\" + Old_Sno + ".jpg");
-                }
+                MessageBox.Show("Modified Successfully");
             }
-            //如果学号未改之更改照片，则直接将原照片改成新照片
-            if (PhotoPath != null)
+            else
             {
-                File.Copy(PhotoPath, "..\\..\\..\\Database\\Student\\Image\\" + New_Sno + ".jpg", true);
+                MessageBox.Show("Please Enter Complete Imformation");
             }
-            MessageBox.Show("修改成功");
         }
-
-        
     } 
 }

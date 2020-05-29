@@ -14,12 +14,19 @@ namespace ArcSoftFace
     public partial class FormRecord : Form
     {
         private string className, classID;
+        private string[] timesList = { "08:00-08:45", "08:50-09:35","09:50-10:35","10:40-11:25","11:30-12:15",
+                                        "14:05-14:50","14:55-15:40","15:45-16:30","16:40-17:25","17:30-18:15",
+                                        "18:30-19:15","19:20-20:05","20:10-20:55"};
         public FormRecord(string className,string classID)
         {
             InitializeComponent();
             this.className = className;
             this.classID = classID;
             setLabel(className, classID);
+            foreach (var i in timesList)
+                this.cmboxTime.Items.Add(i);
+
+            this.cmboxTime.SelectedIndex = 0;
             show_records();
         }
 
@@ -35,7 +42,7 @@ namespace ArcSoftFace
                 string[] strArray = sr.ReadLine().Split(',');
                 if (strArray.Length > 1)
                 {
-                    for (int i = 1; i < strArray.Length; i++)
+                    for (int i = 1; i < strArray.Length; i+=2)
                     {
                         listPreRecord.Items.Add(strArray[i]);
                     }
@@ -57,6 +64,8 @@ namespace ArcSoftFace
         {
             this.Close();
         }
+
+
 
         private void update_records(string newRecords) {
             string[] records;
@@ -90,10 +99,10 @@ namespace ArcSoftFace
                 else
                 {
                     //更新课程对应的csv，初始新纪录所有人没有考勤
-                    records[0] += "," + newRecords;
+                    records[0] += "," + newRecords +"," +"@" + this.cmboxTime.Text.ToString();
                     for(int i = 1; i < records.Length; i++)
                     {
-                        records[i] += "," + "0";
+                        records[i] += "," + "0"+","+"-1"; //-1表示还没有签到，即没有签到范围
                     }
                     File.WriteAllLines("..\\..\\..\\Database\\Class\\List\\" + classID + ".csv", records);
 

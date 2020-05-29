@@ -21,7 +21,7 @@ namespace ArcSoftFace
 
         private void new_edit_Click(object sender, EventArgs e)
         {
-            update(this.textClassNo.Text.ToString(), this.textClassName.Text.ToString(), this.textClassRecord.Text.ToString());
+            update(this.textClassNo.Text.ToString(), this.textClassName.Text.ToString());
         }
 
         private void show_classes()
@@ -39,7 +39,7 @@ namespace ArcSoftFace
             }
         }
 
-        private void update(string newCno, string newCname, string newRecordNum)
+        private void update(string newCno, string newCname)
         {
             string[] classes;
             string path_class = "..\\..\\..\\Database\\Class\\Class.csv";
@@ -47,7 +47,7 @@ namespace ArcSoftFace
             {//文件不存在则创建
                 using (StreamWriter sw = File.CreateText(path_class))
                 {
-                    sw.WriteLine(newCno + ',' + newCname + ',' + newRecordNum);
+                    sw.WriteLine(newCno + ',' + newCname + ',' + "0");
                 }
             }
             try
@@ -59,7 +59,7 @@ namespace ArcSoftFace
                     string Cno = classes[i].Split(',')[0];
                     if (Cno == newCno)
                     {//找到课程号，对应Edit操作
-                        classes[i] = newCno + ',' + newCname + ',' + newRecordNum;
+                        classes[i] = newCno + ',' + newCname + ',' + classes[i].Split(',')[2];
                         flag = 1;
                         break;
                     }
@@ -74,18 +74,13 @@ namespace ArcSoftFace
                 {//不存在则对应new操作
                     using (StreamWriter sw = File.AppendText(path_class))
                     {
-                        sw.WriteLine(newCno + ',' + newCname + ',' + newRecordNum);
+                        sw.WriteLine(newCno + ',' + newCname + ',' + "0");
                         MessageBox.Show($"Add success!");
                     }
                     show_classes();
                     using (StreamWriter sw = new StreamWriter("..\\..\\..\\Database\\Class\\List\\" + newCno + ".csv"))
                     {//创建List.csv
                         string text = "sno";
-                        for(int i = 0; i < Convert.ToInt32(newRecordNum); i++)
-                        {
-                            string str = ",Record" + (i + 1).ToString();
-                            text += str;
-                        }
                         text += "\r\n";
                         sw.Write(text);
                     }
@@ -98,5 +93,6 @@ namespace ArcSoftFace
 
             }
         }
+
     }
 }

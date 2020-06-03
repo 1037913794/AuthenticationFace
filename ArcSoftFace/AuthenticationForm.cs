@@ -50,12 +50,16 @@ namespace ArcSoftFace
         {
             public string Rname;            //记录名
             public int Attendance;          //出席人数
+            public string times;            //允许签到的时间范围
             public List<bool> list;         //出席学生列表（列表长应等于学生数）
-            public Record(string Rname, int Attendance)
+            public List<string> timeList;     //学生签到的有效时间，-1表示未签到，0表示正常，1表示迟到
+            public Record(string Rname, int Attendance,string t)
             {
                 this.Rname = Rname;
                 this.Attendance = Attendance;
+                this.times = t;
                 list = new List<bool>();
+                timeList = new List<string>();
             }
         }
         private List<Class> classes = new List<Class>();
@@ -74,14 +78,46 @@ namespace ArcSoftFace
             rgbVideoSource.Hide();
             irVideoSource.Hide();
 
-
             importClass();
+            identity = FormLogin.identity;
+            if (identity == "Teacher")
+            {
+                buttonClassNew.Enabled = false;
+                buttonClassDelete.Enabled = false;
+                buttonClassEdit.Enabled = false;
+                buttonStudentNew.Enabled = false;
+                buttonStudentDelete.Enabled = false;
+                buttonStudentEdit.Enabled = false;
+                btnStudentData.Enabled = false;
+            }
+            if(identity == "Student")
+            {
+                buttonClassNew.Enabled = false;
+                buttonClassDelete.Enabled = false;
+                buttonClassEdit.Enabled = false;
+                buttonStudentNew.Enabled = false;
+                buttonStudentDelete.Enabled = false;
+                buttonStudentEdit.Enabled = false;
+                buttonRecordNew.Enabled = false;
+                buttonRecordDelete.Enabled = false;
+                buttonRecordDisplay.Enabled = false;
+                btnTeacherData.Enabled = false;
+            }
+            if(identity == "Dean's Office")
+            {
+                buttonRecordNew.Enabled = false;
+                buttonRecordDelete.Enabled = false;
+                buttonRecordDisplay.Enabled = false;
+                btnStudentData.Enabled = false;
+                btnTeacherData.Enabled = false;
+            }
         }
         #endregion
 
         #region Import
         private void importClass()
         {
+
             using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
             {
                 string strLine = sr.ReadLine();
@@ -170,6 +206,10 @@ namespace ArcSoftFace
                     comboBoxStudent.Items.Add(s.Sno + " " + s.Sname);
                 }
                 if (students.Count > 0) comboBoxStudent.SelectedIndex = 0;
+                else
+                {
+                    comboBoxStudent.Text = "";
+                }
                 labelClassStuNum.Text = "学生数：" + students.Count.ToString();
             }
         }
@@ -192,16 +232,18 @@ namespace ArcSoftFace
                     string strLine = sr.ReadLine();
                     string[] strArray = strLine.Split(',');
                     records.Clear();
-                    for (int i = 0; i < classes[index].recordNum; i++)
+                    for (int i = 0, j = 1; i < classes[index].recordNum; i++, j+=2)
                     {
-                        records.Add(new Record(strArray[i + 1], 0));
+
+                        records.Add(new Record(strArray[j], 0, strArray[j+1]));
                     }
                     while ((strLine = sr.ReadLine()) != null)
                     {
                         strArray = strLine.Split(',');
-                        for (int i = 0; i < classes[index].recordNum; i++)
+                        for (int i = 0,j=1; i < classes[index].recordNum; i++,j++)
                         {
-                            if (strArray[i + 1] == "1")
+
+                            if (strArray[j] == "1")
                             {
                                 records[i].Attendance++;
                                 records[i].list.Add(true);
@@ -210,6 +252,9 @@ namespace ArcSoftFace
                             {
                                 records[i].list.Add(false);
                             }
+                            j++;
+                            records[i].timeList.Add(strArray[j]);
+
                         }
                     }
                 }
@@ -239,7 +284,7 @@ namespace ArcSoftFace
             if (image == null)
             {
                 pictureBoxImage.Image = null;
-                pictureBoxFace.Image = null;
+                //pictureBoxFace.Image = null;
                 return;
             }
             if (image.Width > 1536 || image.Height > 1536)
@@ -368,8 +413,8 @@ namespace ArcSoftFace
 
             MRECT rect_f = MemoryUtil.PtrToStructure<MRECT>(multiFaceInfo.faceRects);
             image_f = ImageUtil.CutImage(image_f, rect_f.left, rect_f.top, rect_f.right, rect_f.bottom);
-            image_f = ImageUtil.ScaleImage(image_f, pictureBoxFace.Width, pictureBoxFace.Height);
-            pictureBoxFace.Image = image_f;
+            //image_f = ImageUtil.ScaleImage(image_f, pictureBoxFace.Width, pictureBoxFace.Height);
+            //pictureBoxFace.Image = image_f;
             //显示人脸
             /*
             if (image == null)
@@ -477,7 +522,7 @@ namespace ArcSoftFace
                 string strLine = "Sno";
                 foreach (Record r in records)
                 {
-                    strLine += "," + r.Rname;
+                    strLine += "," + r.Rname+","+r.times;
                 }
                 sw.WriteLine(strLine);
                 for (int i = 0; i < students.Count; i++)
@@ -487,11 +532,21 @@ namespace ArcSoftFace
                     {
                         if (r.list[i]) strLine += ",1";
                         else strLine += ",0";
+                        strLine += "," + r.timeList[i];
                     }
                     sw.WriteLine(strLine);
                 }
             }
             AppendText("已成功保存考勤记录!\r\n");
+        }
+
+        private void ShowLoginForm()
+        {
+            FormLogin formLogin = new FormLogin();
+            if (formLogin.ShowDialog() == DialogResult.OK)
+            {
+
+            }
         }
         #endregion
 
@@ -561,7 +616,7 @@ namespace ArcSoftFace
 
         private void buttonClassDelete_Click(object sender, EventArgs e)
         {
-            if(comboBoxClass.SelectedIndex != 0 && records.Count > 0)
+            if(comboBoxClass.SelectedIndex != 0 )
             {
                 string Class = comboBoxClass.SelectedItem.ToString();
                 string[] strArray;
@@ -604,17 +659,27 @@ namespace ArcSoftFace
         private void buttonStudentNew_Click(object sender, EventArgs e)
         {
             getClass = comboBoxClass.SelectedItem.ToString();
-            getStudent = comboBoxStudent.SelectedItem.ToString();
+            if(comboBoxStudent.SelectedItem != null)
+            {
+                getStudent = comboBoxStudent.SelectedItem.ToString();
+            }
+            else
+            {
+                getStudent = "";
+            }
             FormStudent formStudent = new FormStudent();
             if (formStudent.ShowDialog() == DialogResult.OK)
             {
 
             }
+            importClass();
+            importStudent(comboBoxClass.SelectedIndex);
+            importRecord(comboBoxClass.SelectedIndex);
         }
-        //判断是否所有课程都没有该学生
+         //判断是否所有课程都没有该学生
         private bool ExistStudent(string sno)
         {
-            bool flag = true; //标志位
+            bool flag = false; //标志位
             int lines = 0; //统计课程数，用来定义数组记录课程号
             using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
             {
@@ -649,11 +714,11 @@ namespace ArcSoftFace
                         strClass = strLine.Split(',');
                         if (strClass[0] == sno)
                         {
-                            flag = false;
+                            flag = true;
                             break;
                         }
                     }
-                    if (flag == false)
+                    if (flag == true)
                         break;
                 }
             }
@@ -663,53 +728,28 @@ namespace ArcSoftFace
         //在对应课程中删除该学生信息
         private void deleteStudent(string Cno,string Sno)
         {
-            int record = 0;
-            string text = "Sno";
-            //统计该课程的签到次数
-            using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
+
+            string[] texts = File.ReadAllLines("..\\..\\..\\Database\\Class\\List\\" + Cno + ".csv");
+            for (int i = 0; i < texts.Length; i++)
             {
-                string strLine = sr.ReadLine();
-                string[] strArray;
-                while ((strLine = sr.ReadLine()) != null)
+                string s = texts[i].Split(',')[0];
+                if (s == Sno)
                 {
-                    strArray = strLine.Split(',');
-                    if (strArray[0] == Cno)
-                        record = Convert.ToInt32(strArray[2]);
+                    var lists = texts.ToList();
+                    lists.RemoveAt(i);
+                    texts = lists.ToArray();
+                    break;
                 }
             }
-            for (int i = 0; i < record; i++)
-            {
-                string str = (",Record" + (i + 1).ToString());
-                text += str;
-            }
-            text += "\r\n";
-            //将课程数据全部读出（除去对应的学号）读入text
-            using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\List\\" + Cno + ".csv"))
-            {
-                string strLine = sr.ReadLine();
-                string[] strClass;
-                while ((strLine = sr.ReadLine()) != null)
-                {
-                    strClass = strLine.Split(',');
-                    if (strClass[0] == Sno)
-                        continue;
-                    else
-                    {
-                        text += strLine + "\r\n";
-                    }
-                }
-            }
-            //将text重新写入
-            using (StreamWriter writer = new StreamWriter("..\\..\\..\\Database\\Class\\List\\" + Cno + ".csv"))
-            {
-                writer.Write(text);
-            }
+            File.WriteAllLines("..\\..\\..\\Database\\Class\\List\\" + Cno + ".csv", texts);
         }
+
         private void buttonStudentDelete_Click(object sender, EventArgs e)
         {
-            getClass = comboBoxClass.SelectedItem.ToString();
+            int lines = 0;    //用于统计课程数
+            string getClass = comboBoxClass.SelectedItem.ToString();
             string getStudent = comboBoxStudent.SelectedItem.ToString();
-            string[] strArray1,strArray2;
+            string[] strArray1, strArray2;
             strArray1 = getClass.Split(' ');
             string Cno = strArray1[0], Cname = strArray1[1];
             strArray2 = getStudent.Split(' ');
@@ -717,29 +757,20 @@ namespace ArcSoftFace
             //即删除该学生所有记录
             if (getClass == " ALL STUDENTS")
             {
-                //首先删除学生表中学生信息及照片
-                int lines = 0;  //统计课程数，用来定义数组记录课程号
-                string txt = "Sno,Sname,Gender" + "\r\n";
-                using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Student\\Student.csv"))
+                //首先删除学生表的记录
+                string[] texts = File.ReadAllLines("..\\..\\..\\Database\\Student\\Student.csv");
+                for (int i = 0; i < texts.Length; i++)
                 {
-                    string strLine = sr.ReadLine();
-                    string[] strStudent;
-                    while ((strLine = sr.ReadLine()) != null)
+                    string s = texts[i].Split(',')[0];
+                    if (s == Sno) //找到了对应的学号，删除
                     {
-                        strStudent = strLine.Split(',');
-                        if (strStudent[0] == Sno)
-                            continue;
-                        else
-                        {
-                            txt += strLine + "\r\n";
-                        }
+                        var lists = texts.ToList();
+                        lists.RemoveAt(i);
+                        texts = lists.ToArray();
+                        break;
                     }
                 }
-                //将txt重新写入
-                using (StreamWriter writer = new StreamWriter("..\\..\\..\\Database\\Student\\Student.csv"))
-                {
-                    writer.Write(txt);
-                }
+                File.WriteAllLines("..\\..\\..\\Database\\Student\\Student.csv", texts);
                 File.Delete("..\\..\\..\\Database\\Student\\Image\\" + Sno + ".jpg");
                 //统计课程数目
                 using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Class\\Class.csv"))
@@ -775,44 +806,50 @@ namespace ArcSoftFace
             {
                 deleteStudent(Cno, Sno);
                 //如果所有课程都没有该学生，则删除该学生信息
-                if (ExistStudent(Sno))
+                if (!ExistStudent(Sno))
                 {
-                    string txt = "Sno,Sname,Gender" + "\r\n";
-                    using (StreamReader sr = File.OpenText("..\\..\\..\\Database\\Student\\Student.csv"))
+                    string[] texts = File.ReadAllLines("..\\..\\..\\Database\\Student\\Student.csv");
+                    for (int i = 0; i < texts.Length; i++)
                     {
-                        string strLine = sr.ReadLine();
-                        string[] strClass;
-                        while ((strLine = sr.ReadLine()) != null)
+                        string s = texts[i].Split(',')[0];
+                        if (s == Sno) //找到了对应的学号，删除
                         {
-                            strClass = strLine.Split(',');
-                            if (strClass[0] == Sno)
-                                continue;
-                            else
-                            {
-                                txt += strLine + "\r\n";
-                            }
+                            var lists = texts.ToList();
+                            lists.RemoveAt(i);
+                            texts = lists.ToArray();
+                            break;
                         }
                     }
-                    //将txt重新写入
-                    using (StreamWriter writer = new StreamWriter("..\\..\\..\\Database\\Student\\Student.csv"))
-                    {
-                        writer.Write(txt);
-                    }
+                    File.WriteAllLines("..\\..\\..\\Database\\Student\\Student.csv", texts);
                     File.Delete("..\\..\\..\\Database\\Student\\Image\\" + Sno + ".jpg");
                 }
             }
-            MessageBox.Show("删除成功");
+            importClass();
+            importStudent(comboBoxClass.SelectedIndex);
+            importRecord(comboBoxClass.SelectedIndex);
+            MessageBox.Show("Delete Successfully");
         }
+
 
         private void buttonStudentEdit_Click(object sender, EventArgs e)
         {
             getClass = comboBoxClass.SelectedItem.ToString();
-            getStudent = comboBoxStudent.SelectedItem.ToString();
+            if (comboBoxStudent.SelectedItem != null)
+            {
+                getStudent = comboBoxStudent.SelectedItem.ToString();
+            }
+            else
+            {
+                getStudent = "";
+            }
             FormStudent formStudent = new FormStudent();
             if (formStudent.ShowDialog() == DialogResult.OK)
             {
 
             }
+            importClass();
+            importStudent(comboBoxClass.SelectedIndex);
+            importRecord(comboBoxClass.SelectedIndex);
         }
 
         private void buttonRecordNew_Click(object sender, EventArgs e)
@@ -858,7 +895,7 @@ namespace ArcSoftFace
                         {
                             var strList = lines[i].Split(',').ToList();
                             strList.RemoveAt(col);
-                         
+                            strList.RemoveAt(col);
                             lines[i] = string.Join(",",strList );
                         }
                         File.WriteAllLines("..\\..\\..\\Database\\Class\\List\\" + classes[comboBoxClass.SelectedIndex].Cno + ".csv", lines);
@@ -957,6 +994,31 @@ namespace ArcSoftFace
             {
                 AppendText("按钮异常!\n\n");
             }
+        }
+
+        private void btnStudentData_Click(object sender, EventArgs e)
+        {
+            StudentData std = new StudentData();
+            if (std.ShowDialog() == DialogResult.OK)
+            {
+
+            }
+        }
+
+        private void btnTeacherData_Click(object sender, EventArgs e)
+        {
+            Teacher teacher = new Teacher();
+            if (teacher.ShowDialog() == DialogResult.OK)
+            {
+
+            }
+        }
+
+        private void btnLogOff_Click(object sender, EventArgs e)
+        {
+            Thread th = new Thread(new ThreadStart(ShowLoginForm));
+            this.Close();
+            th.Start();
         }
         #endregion
 
@@ -1086,16 +1148,27 @@ namespace ArcSoftFace
                                         labelRecordName.Text = "姓名：" + students[result].Sname;
                                         if (similarity >= threshold && records[comboBoxRecord.SelectedIndex].list[result] == false)
                                         {
-                                            records[comboBoxRecord.SelectedIndex].list[result] = true;
-                                            records[comboBoxRecord.SelectedIndex].Attendance++;
-                                            students[result].Attendance++;
-                                            AppendText(string.Format("{0}成功签到!\r\n", students[result].Sname));
-                                            labelRecordAttendance.Text = "已到课人数：" + records[comboBoxRecord.SelectedIndex].Attendance.ToString();
-                                            labelRecordSkip.Text = "未到课人数：" + (students.Count - records[comboBoxRecord.SelectedIndex].Attendance).ToString();
-                                            if (result == comboBoxStudent.SelectedIndex)
+                                          
+                                            int k = validTime(records[comboBoxRecord.SelectedIndex].times);
+                                            if (k >= 0)
                                             {
-                                                labelStudentAttendance.Text = "到课次数：" + students[result].Attendance.ToString();
+                                                records[comboBoxRecord.SelectedIndex].list[result] = true;
+                                                records[comboBoxRecord.SelectedIndex].timeList[result] = k.ToString();
+                                                records[comboBoxRecord.SelectedIndex].Attendance++;
+                                                students[result].Attendance++;
+                                                AppendText(string.Format("{0}成功签到!\r\n", students[result].Sname));
+                                                labelRecordAttendance.Text = "已到课人数：" + records[comboBoxRecord.SelectedIndex].Attendance.ToString();
+                                                labelRecordSkip.Text = "未到课人数：" + (students.Count - records[comboBoxRecord.SelectedIndex].Attendance).ToString();
+                                                if (result == comboBoxStudent.SelectedIndex)
+                                                {
+                                                    labelStudentAttendance.Text = "到课次数：" + students[result].Attendance.ToString();
+                                                }
                                             }
+                                            else
+                                            {
+                                                AppendText(string.Format("{0}签到失败，不在有效时间范围内!\r\n", students[result].Sname));
+                                            }
+                                           
                                         }
                                         if (records[comboBoxRecord.SelectedIndex].list[result]) labelRecordStatus.Text = "状态：已签到";
                                         else labelRecordStatus.Text = "状态：未签到";
@@ -1361,6 +1434,9 @@ namespace ArcSoftFace
         /// 记录选中的学生
         /// </summary>
         public static string getStudent;
+        /// 记录登录者身份
+        /// </summary>
+        private string identity;
 
         #region 视频模式下相关
         /// <summary>
@@ -1588,5 +1664,30 @@ namespace ArcSoftFace
             return rel;
         }
         #endregion
+
+        int validTime(string t)
+        {
+            string nowTime = DateTime.Now.ToString("HH:mm");
+            string beginTime = t.Substring(1, 5);
+            string endTime = t.Substring(7);
+            int nowToMinute = int.Parse(nowTime.Substring(0, 2)) * 60 + int.Parse(nowTime.Substring(3));
+            int beginToMinute = int.Parse(beginTime.Substring(0, 2)) * 60 + int.Parse(beginTime.Substring(3));
+            int endToMinute = int.Parse(endTime.Substring(0, 2)) * 60 + int.Parse(endTime.Substring(3));
+            if (beginToMinute <= nowToMinute && nowToMinute <= endToMinute)
+            {
+                if (nowToMinute - beginToMinute <= 10)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return 1;
+                }
+            }
+            else
+            {
+                return -1;
+            }
+        }
     }
 }

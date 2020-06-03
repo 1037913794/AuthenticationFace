@@ -40,6 +40,8 @@
             this.txtRecordName = new System.Windows.Forms.TextBox();
             this.labelClassName = new System.Windows.Forms.Label();
             this.labelClassID = new System.Windows.Forms.Label();
+            this.cmboxTime = new System.Windows.Forms.ComboBox();
+            this.label7 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -83,7 +85,7 @@
             // btnCreat
             // 
             this.btnCreat.Cursor = System.Windows.Forms.Cursors.Default;
-            this.btnCreat.Location = new System.Drawing.Point(183, 344);
+            this.btnCreat.Location = new System.Drawing.Point(195, 457);
             this.btnCreat.Name = "btnCreat";
             this.btnCreat.Size = new System.Drawing.Size(106, 60);
             this.btnCreat.TabIndex = 4;
@@ -93,7 +95,7 @@
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(462, 344);
+            this.btnCancel.Location = new System.Drawing.Point(474, 457);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(106, 60);
             this.btnCancel.TabIndex = 5;
@@ -157,11 +159,32 @@
             this.labelClassID.TabIndex = 11;
             this.labelClassID.Text = "ID";
             // 
+            // cmboxTime
+            // 
+            this.cmboxTime.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmboxTime.FormattingEnabled = true;
+            this.cmboxTime.Location = new System.Drawing.Point(61, 355);
+            this.cmboxTime.Name = "cmboxTime";
+            this.cmboxTime.Size = new System.Drawing.Size(208, 23);
+            this.cmboxTime.TabIndex = 12;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Font = new System.Drawing.Font("宋体", 13.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label7.Location = new System.Drawing.Point(61, 310);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(178, 24);
+            this.label7.TabIndex = 13;
+            this.label7.Text = "Begin-End Time";
+            // 
             // FormRecord
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(851, 539);
+            this.Controls.Add(this.label7);
+            this.Controls.Add(this.cmboxTime);
             this.Controls.Add(this.labelClassID);
             this.Controls.Add(this.labelClassName);
             this.Controls.Add(this.txtRecordName);
@@ -195,5 +218,7 @@
         private System.Windows.Forms.TextBox txtRecordName;
         private System.Windows.Forms.Label labelClassName;
         private System.Windows.Forms.Label labelClassID;
+        private System.Windows.Forms.ComboBox cmboxTime;
+        private System.Windows.Forms.Label label7;
     }
 }
